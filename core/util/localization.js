@@ -153,7 +153,7 @@ Localizer.prototype = {
             }
 
             for (var i = 0;i < elem.childNodes.length;i++) {
-                let node = elem.childNodes[i];
+                var node = elem.childNodes[i];
                 if (node.nodeType === node.ELEMENT_NODE) {
                     process(node, enabled);
                 } else if (node.nodeType === node.TEXT_NODE && enabled) {
