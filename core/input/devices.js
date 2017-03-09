@@ -181,7 +181,10 @@ Mouse.prototype = {
     // private methods
     _captureMouse: function () {
         // capturing the mouse ensures we get the mouseup event
-        setCapture(this._target);
+        // TODO temporary, see https://github.com/novnc/noVNC/issues/784
+        if (this._target.setCapture) {
+            setCapture(this._target);
+        }
 
         // some browsers give us mouseup events regardless,
         // so if we never captured the mouse, we can disregard the event
@@ -189,7 +192,10 @@ Mouse.prototype = {
     },
 
     _releaseMouse: function () {
-        releaseCapture();
+        // TODO temporary, see https://github.com/novnc/noVNC/issues/784
+        if (this._target.releaseCapture) {
+            releaseCapture();
+        }
         this._mouseCaptured = false;
     },
 
