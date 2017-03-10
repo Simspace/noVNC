@@ -29,13 +29,13 @@ export function init_logging (level) {
         /* jshint -W086 */
         switch (level) {
             case 'debug':
-                Debug = console.debug.bind(window.console);
+                Debug = window.console.debug.bind(window.console);
             case 'info':
-                Info  = console.info.bind(window.console);
+                Info  = window.console.info.bind(window.console);
             case 'warn':
-                Warn  = console.warn.bind(window.console);
+                Warn  = window.console.warn.bind(window.console);
             case 'error':
-                Error = console.error.bind(window.console);
+                Error = window.console.error.bind(window.console);
             case 'none':
                 break;
             default:
