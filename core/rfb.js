@@ -200,12 +200,11 @@ export default function RFB(defaults) {
     }
 
     this._keyboard = new Keyboard({target: this._focusContainer,
-                                   onKeyPress: this._handleKeyPress.bind(this)});
+                                   onKeyEvent: this._handleKeyEvent.bind(this)});
 
     this._mouse = new Mouse({target: this._target,
                              onMouseButton: this._handleMouseButton.bind(this),
-                             onMouseMove: this._handleMouseMove.bind(this),
-                             notify: this._keyboard.sync.bind(this._keyboard)});
+                             onMouseMove: this._handleMouseMove.bind(this)});
 
     this._sock = new Websock();
     this._sock.on('message', this._handle_message.bind(this));
@@ -298,12 +297,12 @@ RFB.prototype = {
         if (this._rfb_connection_state !== 'connected' || this._view_only) { return false; }
         Log.Info("Sending Ctrl-Alt-Del");
 
-        RFB.messages.keyEvent(this._sock, KeyTable.XK_Control_L, 1);
-        RFB.messages.keyEvent(this._sock, KeyTable.XK_Alt_L, 1);
-        RFB.messages.keyEvent(this._sock, KeyTable.XK_Delete, 1);
-        RFB.messages.keyEvent(this._sock, KeyTable.XK_Delete, 0);
-        RFB.messages.keyEvent(this._sock, KeyTable.XK_Alt_L, 0);
-        RFB.messages.keyEvent(this._sock, KeyTable.XK_Control_L, 0);
+        this.sendKey(this._sock, KeyTable.XK_Control_L, true);
+        this.sendKey(this._sock, KeyTable.XK_Alt_L, true);
+        this.sendKey(this._sock, KeyTable.XK_Delete, true);
+        this.sendKey(this._sock, KeyTable.XK_Delete, false);
+        this.sendKey(this._sock, KeyTable.XK_Alt_L, false);
+        this.sendKey(this._sock, KeyTable.XK_Control_L, false);
         return true;
     },
 
@@ -328,16 +327,33 @@ RFB.prototype = {
 
     // Send a key press. If 'down' is not specified then send a down key
     // followed by an up key.
-    sendKey: function (keysym, down) {
+    sendKey: function (keysym, code, down) {
         if (this._rfb_connection_state !== 'connected' || this._view_only) { return false; }
-        if (typeof down !== 'undefined') {
+
+        if (down === undefined) {
+            this.sendKey(keysym, code, true);
+            this.sendKey(keysym, code, false);
+            return true;
+        }
+
+        if (this._qemuExtKeyEventSupported) {
+            var scancode = XtScancode[code];
+
+            if (scancode === undefined) {
+                Log.Error('Unable to find a xt scancode for code: ' + code);
+                // FIXME: not in the spec, but this is what
+                // gtk-vnc does
+                scancode = 0;
+            }
+
+            Log.Info("Sending key (" + (down ? "down" : "up") + "): keysym " + keysym + ", scancode " + scancode);
+
+            RFB.messages.QEMUExtendedKeyEvent(this._sock, keysym, down, scancode);
+        } else {
             Log.Info("Sending keysym (" + (down ? "down" : "up") + "): " + keysym);
             RFB.messages.keyEvent(this._sock, keysym, down ? 1 : 0);
-        } else {
-            Log.Info("Sending keysym (down + up): " + keysym);
-            RFB.messages.keyEvent(this._sock, keysym, 1);
-            RFB.messages.keyEvent(this._sock, keysym, 0);
         }
+
         return true;
     },
 
@@ -646,22 +662,8 @@ RFB.prototype = {
         }
     },
 
-    _handleKeyPress: function (keyevent) {
-        if (this._view_only) { return; } // View only, skip keyboard, events
-
-        var down = (keyevent.type == 'keydown');
-        if (this._qemuExtKeyEventSupported) {
-            var scancode = XtScancode[keyevent.code];
-            if (scancode) {
-                var keysym = keyevent.keysym;
-                RFB.messages.QEMUExtendedKeyEvent(this._sock, keysym, down, scancode);
-            } else {
-                Log.Error('Unable to find a xt scancode for code = ' + keyevent.code);
-            }
-        } else {
-            keysym = keyevent.keysym.keysym;
-            RFB.messages.keyEvent(this._sock, keysym, down);
-        }
+    _handleKeyEvent: function (keysym, code, down) {
+        this.sendKey(keysym, code, down);
     },
 
     _handleMouseButton: function (x, y, down, bmask) {
@@ -2460,7 +2462,6 @@ RFB.encodingHandlers = {
         var keyboardEvent = document.createEvent("keyboardEvent");
         if (keyboardEvent.code !== undefined) {
             this._qemuExtKeyEventSupported = true;
-            this._keyboard.setQEMUVNCKeyboardHandler();
         }
     },
 
