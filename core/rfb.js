@@ -297,12 +297,12 @@ RFB.prototype = {
         if (this._rfb_connection_state !== 'connected' || this._view_only) { return false; }
         Log.Info("Sending Ctrl-Alt-Del");
 
-        this.sendKey(this._sock, KeyTable.XK_Control_L, true);
-        this.sendKey(this._sock, KeyTable.XK_Alt_L, true);
-        this.sendKey(this._sock, KeyTable.XK_Delete, true);
-        this.sendKey(this._sock, KeyTable.XK_Delete, false);
-        this.sendKey(this._sock, KeyTable.XK_Alt_L, false);
-        this.sendKey(this._sock, KeyTable.XK_Control_L, false);
+        this.sendKey(KeyTable.XK_Control_L, "ControlLeft", true);
+        this.sendKey(KeyTable.XK_Alt_L, "AltLeft", true);
+        this.sendKey(KeyTable.XK_Delete, "Delete", true);
+        this.sendKey(KeyTable.XK_Delete, "Delete", false);
+        this.sendKey(KeyTable.XK_Alt_L, "AltLeft", false);
+        this.sendKey(KeyTable.XK_Control_L, "ControlLeft", false);
         return true;
     },
 
